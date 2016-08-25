@@ -1,0 +1,5 @@
+.*
+!.keepdir
+!.travis.yml
+composer.lock
+vendor/
