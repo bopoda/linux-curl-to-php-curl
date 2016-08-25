@@ -50,6 +50,18 @@ class LinuxCurlToPhpCurl
 	public function convert()
 	{
 		$this->parseCurlQuery();
+
+		return $this->generateCurlPhpCode();
+	}
+
+	/**
+	 * Return original linux curl query
+	 *
+	 * @return string
+	 */
+	public function getCurlQuery()
+	{
+		return $this->curlQuery;
 	}
 
 	/**
@@ -100,5 +112,17 @@ class LinuxCurlToPhpCurl
 				'value' => $parts[1]
 			];
 		}
+	}
+
+	private function generateCurlPhpCode()
+	{
+		$result[] = '$ch = curl_init();';
+		$result[] = 'curl_setopt($ch, CURLOPT_URL, "' . $this->parsedUrl . '");';
+		$result[] = 'curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);';
+		$result[] = '$output = curl_exec($ch);';
+		$result[] = 'curl_close($ch);';
+		$result[] = 'var_dump($output);';
+
+		return implode(PHP_EOL, $result);
 	}
 }
