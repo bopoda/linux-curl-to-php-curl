@@ -7,4 +7,4 @@ php:
 sudo: false
 
 script:
-  - phpunit --bootstrap=tests/bootstrap.php tests/
+  - phpunit --bootstrap=tests/bootstrap.php --verbose tests/

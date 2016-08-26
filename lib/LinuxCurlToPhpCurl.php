@@ -121,7 +121,7 @@ class LinuxCurlToPhpCurl
 		$result[] = 'curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);';
 		$result[] = '$output = curl_exec($ch);';
 		$result[] = 'curl_close($ch);';
-		$result[] = 'var_dump($output);';
+		$result[] = 'echo $output;';
 
 		return implode(PHP_EOL, $result);
 	}
