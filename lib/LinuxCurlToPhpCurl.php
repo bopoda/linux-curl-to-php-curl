@@ -14,6 +14,27 @@
 class LinuxCurlToPhpCurl
 {
 	/**
+	 * Mapping linux curl header to php CURLOPT_ param name.
+	 * It is not necessary to present exactly all available options here. Because many (but not all) headers can be set via common CURLOPT_HTTPHEADER (e.g. referrer).
+	 *
+	 * @var array
+	 */
+	private $curlHeaderToOptionMapping = [
+		'User-Agent' => CURLOPT_USERAGENT,
+		'Accept-Encoding' => CURLOPT_ENCODING,
+		'Referrer' => CURLOPT_REFERER,
+	];
+
+	/**
+	 * Not necessary php curl headers. Skip it.
+	 *
+	 * @var array
+	 */
+	private $curlHeadersToSkip = [
+
+	];
+
+	/**
 	 * Original linux curl string
 	 *
 	 * @var string
@@ -45,9 +66,12 @@ class LinuxCurlToPhpCurl
 	}
 
 	/**
-	 * Convert linux curl query to curl php code
+	 * Convert linux curl query to curl php code.
+	 *
+	 * @return string
+	 *   valid php code
 	 */
-	public function convert()
+	public function convertToPhpCode()
 	{
 		$this->parseCurlQuery();
 
@@ -104,25 +128,76 @@ class LinuxCurlToPhpCurl
 		foreach ($matches[1] as $headerString) {
 			$parts = array_map('trim', explode(':', $headerString, 2));
 			if (count($parts) != 2) {
-				throw new Exception\CurlParserException('Can not parse header: ' . $headerString);
+				throw new \Exception\CurlParserException('Can not parse header: ' . $headerString);
 			}
 
 			$this->parsedHeaders[] = [
-				'name'  => $parts[0],
-				'value' => $parts[1]
+				'name'  => $this->normalizeHeaderName($parts[0]),
+				'value' => $this->normalizeHeaderValue($parts[1])
 			];
 		}
 	}
 
+	/**
+	 * Преобразует заголовок так, чтобы он начинался с верхнего регистра, а остальные символы были в нижнем.
+	 *  Например: user-AGENT -> User-Agent.
+	 *
+	 * @param string $headerName
+	 * @return string
+	 */
+	private function normalizeHeaderName($headerName)
+	{
+		$headerName = ucwords(strtolower($headerName));
+
+		foreach (array('-') as $delimiter) {
+			if (strpos($headerName, $delimiter) !== false) {
+				$headerName = implode($delimiter, array_map('ucfirst', explode($delimiter, $headerName)));
+			}
+		}
+		return $headerName;
+	}
+
+	/**
+	 * @param string $headerValue
+	 * @return string
+	 */
+	private function normalizeHeaderValue($headerValue)
+	{
+		return $headerValue;
+	}
+
+	/**
+	 * Generate php code - code which sent curl query.
+	 *
+	 * @return string
+	 */
 	private function generateCurlPhpCode()
 	{
-		$result[] = '$ch = curl_init();';
-		$result[] = 'curl_setopt($ch, CURLOPT_URL, "' . $this->parsedUrl . '");';
-		$result[] = 'curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);';
-		$result[] = '$output = curl_exec($ch);';
-		$result[] = 'curl_close($ch);';
-		$result[] = 'echo $output;';
+		$resultPhpCode = [
+			'$ch = curl_init();',
+			'curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);',
+			'curl_setopt($ch, CURLOPT_URL, "' . $this->parsedUrl . '");',
+		];
 
-		return implode(PHP_EOL, $result);
+		foreach ($this->parsedHeaders as $headerData) {
+			if (isset($this->curlHeaderToOptionMapping[$headerData['name']])) {
+				$resultPhpCode[] = 'curl_setopt($ch, ' . $this->curlHeaderToOptionMapping[$headerData['name']] . ', \'' . $headerData['value'] . '\');';
+			}
+			elseif (in_array($headerData['name'], $this->curlHeadersToSkip)) {
+				// do nothing. We should not set this header.
+				continue;
+			}
+			else {
+				$resultPhpCode[] = 'curl_setopt($ch, CURLOPT_HTTPHEADER, array(\'' . $headerData['name'] . ': ' . $headerData['value'] . '\'));';
+			}
+		}
+
+		$resultPhpCode = array_merge($resultPhpCode, [
+			'$output = curl_exec($ch);',
+			'curl_close($ch);',
+			'echo $output;',
+		]);
+
+		return implode(PHP_EOL, $resultPhpCode);
 	}
 }
