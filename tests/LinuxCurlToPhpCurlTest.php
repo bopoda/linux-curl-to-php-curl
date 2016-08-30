@@ -97,6 +97,7 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 			["curl '{$this->endpoint}'  -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0' -H 'Accept-Encoding: identity' "],
 			["curl '{$this->endpoint}' -H 'referer: host.com' -H 'User-Agent: any'"],
 			["curl '{$this->endpoint}' -H 'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4' -H 'User-Agent: any'"],
+			["curl '{$this->endpoint}' -H 'Cache-Control: max-age=0' -H 'User-Agent: any'"],
 		];
 	}
 
