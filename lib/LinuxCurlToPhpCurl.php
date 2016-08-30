@@ -15,14 +15,14 @@ class LinuxCurlToPhpCurl
 {
 	/**
 	 * Mapping linux curl header to php CURLOPT_ param name.
-	 * It is not necessary to present exactly all available options here. Because many (but not all) headers can be set via common CURLOPT_HTTPHEADER (e.g. referrer).
+	 * It is not necessary to present exactly all available options here. Because many (but not all) headers can be set via common CURLOPT_HTTPHEADER (e.g. referrer, Accept-Language).
 	 *
 	 * @var array
 	 */
-	private $curlHeaderToOptionMapping = [
-		'User-Agent' => CURLOPT_USERAGENT,
-		'Accept-Encoding' => CURLOPT_ENCODING,
-		'Referrer' => CURLOPT_REFERER,
+	private $curlHeaderToPhpCurlOptionMapping = [
+		'User-Agent' => 'CURLOPT_USERAGENT',
+		'Accept-Encoding' => 'CURLOPT_ENCODING',
+		'Referrer' => 'CURLOPT_REFERER',
 	];
 
 	/**
@@ -180,8 +180,8 @@ class LinuxCurlToPhpCurl
 		];
 
 		foreach ($this->parsedHeaders as $headerData) {
-			if (isset($this->curlHeaderToOptionMapping[$headerData['name']])) {
-				$resultPhpCode[] = 'curl_setopt($ch, ' . $this->curlHeaderToOptionMapping[$headerData['name']] . ', \'' . $headerData['value'] . '\');';
+			if (isset($this->curlHeaderToPhpCurlOptionMapping[$headerData['name']])) {
+				$resultPhpCode[] = 'curl_setopt($ch, ' . $this->curlHeaderToPhpCurlOptionMapping[$headerData['name']] . ', \'' . $headerData['value'] . '\');';
 			}
 			elseif (in_array($headerData['name'], $this->curlHeadersToSkip)) {
 				// do nothing. We should not set this header.
