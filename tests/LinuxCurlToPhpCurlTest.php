@@ -98,6 +98,7 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 			["curl '{$this->endpoint}' -H 'referer: host.com' -H 'User-Agent: any'"],
 			["curl '{$this->endpoint}' -H 'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4' -H 'User-Agent: any'"],
 			["curl '{$this->endpoint}' -H 'Cache-Control: max-age=0' -H 'User-Agent: any'"],
+			["curl '{$this->endpoint}' -H 'Cookie: JSESSIONID=4BC7A5958A4EB02C9B7237A702BE1355; logged_in=yes; www-20480=MIFBNLFDFAAA' -H 'User-Agent: any'"],
 		];
 	}
 
