@@ -1,0 +1,36 @@
+<?php
+
+$headers = getallheaders();
+ksort($headers);
+
+
+// clear params which differ from query to query
+$server = $_SERVER;
+unset($server['REMOTE_PORT']);
+unset($server['REQUEST_TIME']);
+unset($server['REQUEST_TIME_FLOAT']);
+unset($server['UNIQUE_ID']);
+
+//this values not presented from php curl query
+unset($server['QUERY_STRING']);
+unset($server['SERVER_SIGNATURE']);
+unset($server['SHLVL']);
+unset($server['SERVER_ADMIN']);//hide this info
+
+ksort($server);
+
+
+//row - request and $_SEVER headers hash:
+echo sha1(serialize($headers) . serialize($server)) . PHP_EOL;
+
+//row - empty row
+echo PHP_EOL;
+
+//row - request headers in json format
+echo json_encode($headers). PHP_EOL;
+
+//row - empty row
+echo PHP_EOL;
+
+//row - $_SERVER headers in json format
+echo json_encode($server) . PHP_EOL;

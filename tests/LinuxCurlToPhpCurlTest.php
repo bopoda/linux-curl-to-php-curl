@@ -42,37 +42,43 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 	/**
 	 * Проверяем правильность конвертирования linux curl в php curl.
 	 * В запросе должны быть посланы абсолютно идентичные заголовки. Что мы и проверяем, посылая 2 запроса:
-	 * первый запрос посылаем средствами linux curl, а второй запрос посылаем выполняя полученный при конвертации php code. Затем сравниваем результаты запросов.
+	 * первый запрос посылаем средствами linux curl через exec, а второй запрос посылаем выполняя полученный при конвертации php code через eval.
+	 * Затем сравниваем результаты обоих запросов. На сервер должны придти 2 запрос с идентичными хедерами - значит конвертация в php curl прошла ок.
+	 * Реализация серверного когда, на который мы посылаем оба запроса http://query.jeka.by представлена в tests/server.php.txt.
 	 *
 	 * @dataProvider testConvertToPhpCodeProvider
 	 *
+	 * @param string $number  Just for usability
 	 * @param string $curlQuery
 	 * @param string $message
 	 *   optional message for assertEquals method
 	 */
-	public function testConvertToPhpCode($curlQuery, $message = NULL)
+	public function testConvertToPhpCode($number, $curlQuery, $message = NULL)
 	{
 		$converter = new LinuxCurlToPhpCurl($curlQuery);
 		$phpCode = $converter->convertToPhpCode();
 
 		exec($curlQuery, $linuxCurlOutput);
-		$headersHash = $linuxCurlOutput[0];
-		if (strlen($headersHash) != 40) {
+		$requestHash1 = $linuxCurlOutput[0];
+		if (strlen($requestHash1) != 40) {
 			$this->markTestIncomplete('Temporary server problems: can`t get headers hash via curl query');
 		}
-		$headers = json_decode($linuxCurlOutput[2], true);
+		$headers1 = json_decode($linuxCurlOutput[2], true);
+		$server1 = json_decode($linuxCurlOutput[4], true);
 
 		ob_start();
 		eval($phpCode);
 		$phpCurlOutput = ob_get_clean();
-		$headersHash2 = $this->getRequestHeadersHashFromResponseBody($phpCurlOutput);
+		$requestHash2 = $this->getRequestHeadersHashFromResponseBody($phpCurlOutput);
 		$headers2 = $this->getRequestHeadersFromResponseBody($phpCurlOutput);
+		$server2 = $this->getServerHeadersFromResponseBody($phpCurlOutput);
 
-		$messages = [];
+		$messages = ['Got different request hashes'];
 		if ($message) {
 			$messages[] = $message;
 		}
-		foreach ($headers as $header => $value) {
+		// compare server request headers
+		foreach ($headers1 as $header => $value) {
 			if (empty($headers2[$header])) {
 				$messages[] = "Header $header not presented ($header: $value).";
 			}
@@ -80,8 +86,17 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 				$messages[] = "Header '$header' values are differ: '$value' and '$headers2[$header]'";
 			}
 		}
+		// compare server $_SERVER headers
+		foreach ($server1 as $header => $value) {
+			if (empty($server2[$header])) {
+				$messages[] = '$_SERVER param '. $header . " not presented ($header: $value).";
+			}
+			elseif ($server2[$header] !== $value) {
+				$messages[] = '$_SERVER param values ' . $header . " are differ: '$value' and '$server2[$header]'";
+			}
+		}
 
-		$this->assertEquals($headersHash, $headersHash2, implode(PHP_EOL, $messages));
+		$this->assertEquals($requestHash1, $requestHash2, implode(PHP_EOL, $messages));
 	}
 
 	/**
@@ -93,12 +108,14 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 	public function testConvertToPhpCodeProvider()
 	{
 		return [
-			["curl '{$this->endpoint}' -H 'User-Agent: test-user-agent'"],
-			["curl '{$this->endpoint}'  -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0' -H 'Accept-Encoding: identity' "],
-			["curl '{$this->endpoint}' -H 'referer: host.com' -H 'User-Agent: any'"],
-			["curl '{$this->endpoint}' -H 'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4' -H 'User-Agent: any'"],
-			["curl '{$this->endpoint}' -H 'Cache-Control: max-age=0' -H 'User-Agent: any'"],
-			["curl '{$this->endpoint}' -H 'Cookie: JSESSIONID=4BC7A5958A4EB02C9B7237A702BE1355; logged_in=yes; www-20480=MIFBNLFDFAAA' -H 'User-Agent: any'"],
+			[0, "curl '{$this->endpoint}' -H 'User-Agent: test-user-agent'"],
+			[1, "curl '{$this->endpoint}'  -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0' -H 'Accept-Encoding: identity' "],
+			[2, "curl '{$this->endpoint}' -H 'referer: host.com' -H 'User-Agent: any'"],
+			[3, "curl '{$this->endpoint}' -H 'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4' -H 'User-Agent: any'"],
+			[4, "curl '{$this->endpoint}' -H 'Cache-Control: max-age=0' -H 'User-Agent: any'"],
+			[5, "curl '{$this->endpoint}' -H 'Cookie: JSESSIONID=4BC7A5958A4EB02C9B7237A702BE1355; logged_in=yes; www-20480=MIFBNLFDFAAA' -H 'User-Agent: any'"],
+			[6, "curl '{$this->endpoint}' -X GET -H 'User-Agent: any'"],
+			[7, "curl '{$this->endpoint}' -X OPTION -H 'User-Agent: any'"],
 		];
 	}
 
@@ -124,10 +141,21 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 	{
 		$rows = explode(PHP_EOL, $body);
 		if (empty($rows[2]) || !($headers = json_decode($rows[2], true))) {
-			$this->markTestIncomplete('Temporary server problems: can`t get headers via php curl query');
+			$this->markTestIncomplete('Temporary server problems: can`t get request headers via php curl query');
 		}
 		else {
 			return $headers;
+		}
+	}
+
+	private function getServerHeadersFromResponseBody($body)
+	{
+		$rows = explode(PHP_EOL, $body);
+		if (empty($rows[4]) || !($server = json_decode($rows[4], true))) {
+			$this->markTestIncomplete('Temporary server problems: can`t get $_SERVER headers via php curl query');
+		}
+		else {
+			return $server;
 		}
 	}
 
