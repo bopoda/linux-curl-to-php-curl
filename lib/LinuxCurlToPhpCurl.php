@@ -49,6 +49,13 @@ class LinuxCurlToPhpCurl
 	private $parsedUrl;
 
 	/**
+	 * Parsed request method
+	 *
+	 * @var string
+	 */
+	private $parsedRequestMethod;
+
+	/**
 	 * Parsed headers
 	 *
 	 * @var array
@@ -94,6 +101,7 @@ class LinuxCurlToPhpCurl
 	private function parseCurlQuery()
 	{
 		$this->parseUrl();
+		$this->parseRequestMethod();
 		$this->parseHeaders();
 	}
 
@@ -109,6 +117,36 @@ class LinuxCurlToPhpCurl
 		}
 
 		$this->parsedUrl = $matches[1];
+	}
+
+	/**
+	 * Method for parse http request method from curl query
+	 *
+	 * @throws \Exception\CurlParserException
+	 */
+	private function parseRequestMethod()
+	{
+		$allowableOptions = [
+			'GET',
+			'PUT',
+			'POST',
+			'HEAD',
+			'TRACE',
+			'DELETE',
+			'DELETE',
+			'OPTIONS',
+			'CONNECT',
+		];
+
+		if (preg_match('/\s+-X\s+(\w+)/', $this->curlQuery, $matches)) {
+			$requestMethod = strtoupper($matches[1]);
+
+			if (!in_array($requestMethod, $allowableOptions)) {
+				throw new \Exception\CurlParserException('got unknown request method: ' . $requestMethod);
+			}
+
+			$this->parsedRequestMethod = $requestMethod;
+		}
 	}
 
 	/**
@@ -178,6 +216,10 @@ class LinuxCurlToPhpCurl
 			'curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);',
 			'curl_setopt($ch, CURLOPT_URL, "' . $this->parsedUrl . '");',
 		];
+
+		if ($this->parsedRequestMethod) {
+			$resultPhpCode[] = 'curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "'.$this->parsedRequestMethod.'");';
+		}
 
 		foreach ($this->parsedHeaders as $headerData) {
 			if (isset($this->curlHeaderToPhpCurlOptionMapping[$headerData['name']])) {
