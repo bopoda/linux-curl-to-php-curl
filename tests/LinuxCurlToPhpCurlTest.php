@@ -116,6 +116,7 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 			[5, "curl '{$this->endpoint}' -H 'Cookie: JSESSIONID=4BC7A5958A4EB02C9B7237A702BE1355; logged_in=yes; www-20480=MIFBNLFDFAAA' -H 'User-Agent: any'"],
 			[6, "curl '{$this->endpoint}' -X GET -H 'User-Agent: any'"],
 			[7, "curl '{$this->endpoint}' -X OPTIONS -H 'User-Agent: any'"],
+			[7, "curl '{$this->endpoint}' --data-binary '{\"token\":\"iRFEyYYWwaWV1mhTQ3t7XKsuniMYXzsdnqADcfHu\",\"login\":\"nickname\"}' -H 'User-Agent: any'"],
 		];
 	}
 

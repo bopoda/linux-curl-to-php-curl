@@ -56,6 +56,13 @@ class LinuxCurlToPhpCurl
 	private $parsedRequestMethod;
 
 	/**
+	 * Parsed POST data
+	 *
+	 * @var string
+	 */
+	private $parsedPostData;
+
+	/**
 	 * Parsed headers
 	 *
 	 * @var array
@@ -103,6 +110,7 @@ class LinuxCurlToPhpCurl
 		$this->parseUrl();
 		$this->parseRequestMethod();
 		$this->parseHeaders();
+		$this->parsePostData();
 	}
 
 	/**
@@ -173,6 +181,18 @@ class LinuxCurlToPhpCurl
 				'name'  => $this->normalizeHeaderName($parts[0]),
 				'value' => $this->normalizeHeaderValue($parts[1])
 			];
+		}
+	}
+
+	/**
+	 * Parse $_POST data from curl query
+	 */
+	private function parsePostData()
+	{
+		if (preg_match('/\-\-data\-binary\s+\'([^\']+)\'/', $this->curlQuery, $matches)) {
+			$data = $matches[1];
+
+			$this->parsedPostData = $data;
 		}
 	}
 
