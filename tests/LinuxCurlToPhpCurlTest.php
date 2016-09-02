@@ -65,6 +65,7 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 		}
 		$headers1 = json_decode($linuxCurlOutput[2], true);
 		$server1 = json_decode($linuxCurlOutput[4], true);
+		$post1 = json_decode($linuxCurlOutput[6], true);
 
 		ob_start();
 		eval($phpCode);
@@ -72,6 +73,7 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 		$requestHash2 = $this->getRequestHeadersHashFromResponseBody($phpCurlOutput);
 		$headers2 = $this->getRequestHeadersFromResponseBody($phpCurlOutput);
 		$server2 = $this->getServerHeadersFromResponseBody($phpCurlOutput);
+		$post2 = $this->getPostDataFromResponseBody($phpCurlOutput);
 
 		$messages = ['Got different request hashes'];
 		if ($message) {
@@ -108,14 +110,14 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 	public function testConvertToPhpCodeProvider()
 	{
 		return [
-			[0, "curl '{$this->endpoint}' -H 'User-Agent: test-user-agent'"],
-			[1, "curl '{$this->endpoint}'  -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0' -H 'Accept-Encoding: identity' "],
-			[2, "curl '{$this->endpoint}' -H 'referer: host.com' -H 'User-Agent: any'"],
-			[3, "curl '{$this->endpoint}' -H 'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4' -H 'User-Agent: any'"],
-			[4, "curl '{$this->endpoint}' -H 'Cache-Control: max-age=0' -H 'User-Agent: any'"],
-			[5, "curl '{$this->endpoint}' -H 'Cookie: JSESSIONID=4BC7A5958A4EB02C9B7237A702BE1355; logged_in=yes; www-20480=MIFBNLFDFAAA' -H 'User-Agent: any'"],
-			[6, "curl '{$this->endpoint}' -X GET -H 'User-Agent: any'"],
-			[7, "curl '{$this->endpoint}' -X OPTIONS -H 'User-Agent: any'"],
+//			[0, "curl '{$this->endpoint}' -H 'User-Agent: test-user-agent'"],
+//			[1, "curl '{$this->endpoint}'  -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0' -H 'Accept-Encoding: identity' "],
+//			[2, "curl '{$this->endpoint}' -H 'referer: host.com' -H 'User-Agent: any'"],
+//			[3, "curl '{$this->endpoint}' -H 'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4' -H 'User-Agent: any'"],
+//			[4, "curl '{$this->endpoint}' -H 'Cache-Control: max-age=0' -H 'User-Agent: any'"],
+//			[5, "curl '{$this->endpoint}' -H 'Cookie: JSESSIONID=4BC7A5958A4EB02C9B7237A702BE1355; logged_in=yes; www-20480=MIFBNLFDFAAA' -H 'User-Agent: any'"],
+//			[6, "curl '{$this->endpoint}' -X GET -H 'User-Agent: any'"],
+//			[7, "curl '{$this->endpoint}' -X OPTIONS -H 'User-Agent: any'"],
 			[7, "curl '{$this->endpoint}' --data-binary '{\"token\":\"iRFEyYYWwaWV1mhTQ3t7XKsuniMYXzsdnqADcfHu\",\"login\":\"nickname\"}' -H 'User-Agent: any'"],
 		];
 	}
@@ -157,6 +159,21 @@ class LinuxCurlToPhpCurlTest extends PHPUnit_Framework_TestCase
 		}
 		else {
 			return $server;
+		}
+	}
+
+	/**
+	 * @param string $body
+	 * @return string
+	 */
+	private function getPostDataFromResponseBody($body)
+	{
+		$rows = explode(PHP_EOL, $body);
+		if (empty($rows[6]) || (false === ($postData = json_decode($rows[6], true)))) {
+			$this->markTestIncomplete('Temporary server problems: can`t get POST data via php curl query');
+		}
+		else {
+			return $postData;
 		}
 	}
 

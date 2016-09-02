@@ -189,10 +189,11 @@ class LinuxCurlToPhpCurl
 	 */
 	private function parsePostData()
 	{
-		if (preg_match('/\-\-data\-binary\s+\'([^\']+)\'/', $this->curlQuery, $matches)) {
+		if (preg_match('/(?:\-\-data\-binary|\-d)\s+\'([^\']+)\'/', $this->curlQuery, $matches)) {
 			$data = $matches[1];
 
 			$this->parsedPostData = $data;
+			$this->parsedRequestMethod = 'POST';
 		}
 	}
 
@@ -239,6 +240,9 @@ class LinuxCurlToPhpCurl
 
 		if ($this->parsedRequestMethod) {
 			$resultPhpCode[] = 'curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "'.$this->parsedRequestMethod.'");';
+		}
+		if ($this->parsedPostData) {
+			$resultPhpCode[] = 'curl_setopt($ch, CURLOPT_POSTFIELDS, \'$this->parsedPostData\');';
 		}
 
 		foreach ($this->parsedHeaders as $headerData) {
